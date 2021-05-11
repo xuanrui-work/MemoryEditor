@@ -36,7 +36,7 @@ class MemoryEditor:
 		Args:
 			processId: Process ID of the process to perform memory editing.
 		Raises:
-			WinError: If OpenProcess API failed.
+			OSError: If OpenProcess API failed.
 		"""
 
 		self.processId = processId
@@ -57,7 +57,7 @@ class MemoryEditor:
 		Returns:
 			The data read.
 		Raises:
-			WinError: If ReadProcessMemory API failed.
+			OSError: If ReadProcessMemory API failed.
 		"""
 
 		buffer = dataType()
@@ -80,7 +80,7 @@ class MemoryEditor:
 		Returns:
 			Number of bytes written.
 		Raises:
-			WinError: If WriteProcessMemory API failed.
+			OSError: If WriteProcessMemory API failed.
 		"""	
 
 		buffer = dataType(data)
@@ -106,7 +106,7 @@ class MemoryEditor:
 		Returns:
 			bytearray object containing the bytes read.
 		Raises:
-			WinError: If ReadProcessMemory API failed.
+			OSError: If ReadProcessMemory API failed.
 		"""
 
 		byteArray = bytearray(size)
@@ -131,7 +131,7 @@ class MemoryEditor:
 		Returns:
 			Number of bytes written.
 		Raises
-			WinError: If WriteProcessMemory API failed.
+			OSError: If WriteProcessMemory API failed.
 		"""
 
 		buffer = (c_ubyte * len(byteArray)).from_buffer(byteArray)
@@ -147,7 +147,7 @@ class MemoryEditor:
 		"""
 		Closes the resources opened by this MemoryEditor class.
 		Raises:
-			WinError: If CloseHandle API failed.
+			OSError: If CloseHandle API failed.
 		"""
 
 		result = CloseHandle(self.hProcess)
