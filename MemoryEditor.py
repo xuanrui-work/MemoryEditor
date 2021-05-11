@@ -1,115 +1,155 @@
 from ctypes import *
 from ctypes.wintypes import *
 
+import ctypes
+
+
+kernel32 = WinDLL('kernel32', use_last_error=True)
+
+OpenProcess = kernel32.OpenProcess
+OpenProcess.argtypes = [DWORD, BOOL, DWORD]
+OpenProcess.restype  = HANDLE
+
+ReadProcessMemory = kernel32.ReadProcessMemory
+ReadProcessMemory.argtypes = [HANDLE, LPCVOID, LPVOID, c_size_t, POINTER(c_size_t)]
+ReadProcessMemory.restype  = BOOL
+
+WriteProcessMemory = kernel32.WriteProcessMemory
+WriteProcessMemory.argtypes = [HANDLE, LPVOID, LPCVOID, c_size_t, POINTER(c_size_t)]
+WriteProcessMemory.restype  = BOOL
+
+CloseHandle = kernel32.CloseHandle
+CloseHandle.argtypes = [HANDLE]
+CloseHandle.restype  = BOOL
+
 class MemoryEditor:
 	"""
-	The MemoryEditor class is used to interface with Windows API inside kernel32.
-	It provides interface to OpenProcess, ReadProcessMemory, WriteProcessMemory, CloseHandle.
+	The MemoryEditor class is used to access data from the address space of the specified process,
+	by utilizing native Windows APIs from kernel32.
 	"""
 
-	kernel32 = WinDLL('kernel32', use_last_error=True)
-
-	OpenProcess = kernel32.OpenProcess
-	OpenProcess.argtypes = [DWORD, BOOL, DWORD]
-	OpenProcess.restype  = HANDLE
-
-	ReadProcessMemory = kernel32.ReadProcessMemory
-	ReadProcessMemory.argtypes = [HANDLE, LPCVOID, LPVOID, c_size_t, POINTER(c_size_t)]
-	ReadProcessMemory.restype  = BOOL
-
-	WriteProcessMemory = kernel32.WriteProcessMemory
-	WriteProcessMemory.argtypes = [HANDLE, LPVOID, LPCVOID, c_size_t, POINTER(c_size_t)]
-	WriteProcessMemory.restype  = BOOL
-
-	CloseHandle = kernel32.CloseHandle
-	CloseHandle.argtypes = [HANDLE]
-	CloseHandle.restype  = BOOL
-
-	@classmethod
-	def openProcess(cls, dwProcessId):
+	def __init__(self, processId):
 		"""
-		Opens an existing process for memory reading/writing access. Wrapper for OpenProcess.
-		OpenProcess: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess
-		
+		Initializes the MemoryEditor class given a process ID. The specified process is opened automatically,
+		and the handle to it is saved to hProcess.
+
 		Args:
-			dwProcessId: Process ID of the process to be opened.
-		Returns:
-			Open handle to the specified process. The type is HANDLE().
+			processId: Process ID of the process to perform memory editing.
 		Raises:
-			WinError: OpenProcess API failed.
+			WinError: If OpenProcess API failed.
 		"""
 
-		hProcess = cls.OpenProcess(0x08 | 0x10 | 0x20, False, dwProcessId)
+		self.processId = processId
 
+		hProcess = OpenProcess(0x08 | 0x10 | 0x20, False, processId)
 		if hProcess is None:
 			raise WinError(get_last_error())
-		return hProcess
 
-	@classmethod
-	def readProcessMemoryInBytes(cls, hProcess, lpBaseAddress, nSize):
+		self.hProcess = hProcess
+
+	def readData(self, baseAddress, dataType):
 		"""
-		Copies the data in the specified address range from the address space of the specified
-		process to a bytes object. Wrapper for ReadProcessMemory.
-		ReadProcessMemory: https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-readprocessmemory
+		Reads the data in the specified address range from the address space of the opened process.
 
 		Args:
-			hProcess: Handle to the process with memory that is being read.
-			lpBaseAddress: Pointer to the base address in the specified process from which to read.
-			nSize: The number of bytes to be read from the specified address.
+			baseAddress: Pointer to the base address in the specified process from which to read.
+			dataType: The ctypes._SimpleCData type for determining the size of the read OP.
 		Returns:
-			bytearray object containing the bytes read from the address space of the specified process. The type is bytearray().
+			The data read.
 		Raises:
-			WinError: ReadProcessMemory API failed.
+			WinError: If ReadProcessMemory API failed.
 		"""
 
-		byteArray = bytearray(nSize)
+		buffer = dataType()
+		bytesRead = c_size_t()
+
+		result = ReadProcessMemory(self.hProcess, baseAddress, byref(buffer), sizeof(buffer), byref(bytesRead))
+		if result == 0:
+			raise WinError(get_last_error())
+
+		return buffer.value
+
+	def writeData(self, baseAddress, dataType, data):
+		"""
+		Writes the given data to the specified address range in the address space of the opened process.
+
+		Args:
+			baseAddress: Pointer to the base address in the specified process to which data is written.
+			dataType: The ctypes._SimpleCData type for determining the size of the write OP.
+			data: The data to write.
+		Returns:
+			Number of bytes written.
+		Raises:
+			WinError: If WriteProcessMemory API failed.
+		"""	
+
+		buffer = dataType(data)
+		if buffer.value != data:
+			raise ValueError('The given data does not fit into the specified dataType')
+
+		bytesWritten = c_size_t()
+
+		result = WriteProcessMemory(self.hProcess, baseAddress, byref(buffer), sizeof(buffer), byref(bytesWritten))
+		if result == 0:
+			raise WinError(get_last_error())
+
+		return bytesWritten.value
+
+	def readByteArray(self, baseAddress, size):
+		"""
+		Reads the data in the specified address range from the address space of the opened process,
+		into a bytearray.
+
+		Args:
+			baseAddress: Pointer to the base address in the specified process from which to read.
+			size: The number of bytes to read.
+		Returns:
+			bytearray object containing the bytes read.
+		Raises:
+			WinError: If ReadProcessMemory API failed.
+		"""
+
+		byteArray = bytearray(size)
 
 		buffer = (c_ubyte * len(byteArray)).from_buffer(byteArray)
 		bytesRead = c_size_t()
 
-		result = cls.ReadProcessMemory(hProcess, lpBaseAddress, byref(buffer), sizeof(buffer), byref(bytesRead))
-
+		result = ReadProcessMemory(self.hProcess, baseAddress, byref(buffer), sizeof(buffer), byref(bytesRead))
 		if result == 0:
 			raise WinError(get_last_error())
+
 		return byteArray[0:bytesRead.value]
 
-	@classmethod
-	def writeProcessMemoryInBytes(cls, hProcess, lpBaseAddress, byteArray):
+	def writeByteArray(self, baseAddress, byteArray):
 		"""
-		Writes data from a bytearray to an area of memory in the specified process. Wrapper for WriteProcessMemory.
-		WriteProcessMemory: https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-writeprocessmemory
+		Writes data from the given bytearray to the specified address range in the address space of
+		the opened process.
 
 		Args:
-			hProcess: Handle to the process with memory to be modified.
-			lpBaseAddress: Pointer to the base address in the specified process from which to read.
-			byteArray: bytearray object containing the bytes to be written in the address space of the specified process.
+			baseAddress: Pointer to the base address in the specified process to which data is written.
+			byteArray: bytearray object containing the bytes to write.
 		Returns:
-			Number of bytes transferred into the specified process.
-		Raises:
-			WinError: WriteProcessMemory API failed.
+			Number of bytes written.
+		Raises
+			WinError: If WriteProcessMemory API failed.
 		"""
 
 		buffer = (c_ubyte * len(byteArray)).from_buffer(byteArray)
 		bytesWritten = c_size_t()
 
-		result = cls.WriteProcessMemory(hProcess, lpBaseAddress, byref(buffer), sizeof(buffer), byref(bytesWritten))
-
+		result = WriteProcessMemory(self.hProcess, baseAddress, byref(buffer), sizeof(buffer), byref(bytesWritten))
 		if result == 0:
 			raise WinError(get_last_error())
+
 		return bytesWritten.value
 
-	@classmethod
-	def closeHandle(cls, hProcess):
+	def close(self):
 		"""
-		Closes an open handle to a process. Wrapper for CloseHandle.
-		CloseHandle: https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
-
-		Args:
-			hProcess: Handle to the process opened with openProcess
+		Closes the resources opened by this MemoryEditor class.
 		Raises:
-			WinError: CloseHandle API failed.
+			WinError: If CloseHandle API failed.
 		"""
 
-		result = cls.CloseHandle(hProcess)
+		result = CloseHandle(self.hProcess)
 		if result == 0:
 			raise WinError(get_last_error())
