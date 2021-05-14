@@ -3,8 +3,11 @@ from ctypes.wintypes import *
 
 import ctypes
 
-
 kernel32 = WinDLL('kernel32', use_last_error=True)
+
+PROCESS_VM_OPERATION = 0x0008
+PROCESS_VM_READ		 = 0x0010
+PROCESS_VM_WRITE	 = 0x0020
 
 OpenProcess = kernel32.OpenProcess
 OpenProcess.argtypes = [DWORD, BOOL, DWORD]
@@ -41,7 +44,7 @@ class MemoryEditor:
 
 		self.processId = processId
 
-		hProcess = OpenProcess(0x08 | 0x10 | 0x20, False, processId)
+		hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, False, processId)
 		if hProcess is None:
 			raise WinError(get_last_error())
 
