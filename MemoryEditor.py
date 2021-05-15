@@ -1,7 +1,7 @@
+from . import GetModuleBaseAddress
+
 from ctypes import *
 from ctypes.wintypes import *
-
-import ctypes
 
 kernel32 = WinDLL('kernel32', use_last_error=True)
 
@@ -149,6 +149,7 @@ class MemoryEditor:
 	def close(self):
 		"""
 		Closes the resources opened by this MemoryEditor class.
+
 		Raises:
 			OSError: If CloseHandle API failed.
 		"""
@@ -156,3 +157,19 @@ class MemoryEditor:
 		result = CloseHandle(self.hProcess)
 		if result == 0:
 			raise WinError(get_last_error())
+
+	def getModuleBaseAddress(self, moduleName):
+		"""
+		Gets the base address of the module within the address space of the opened process.
+
+		Args:
+			moduleName: The module name of the module to lookup.
+		Returns:
+			The base address of the specified module.
+		Raises:
+			OSError: If CreateToolhelp32Snapshot, Module32First, or Module32Next API failed.
+			FileNotFoundError: If the specified module cannot be found in the process.
+		"""
+
+		modBaseAddr = GetModuleBaseAddress.getModuleBaseAddress(self.processId, moduleName)
+		return modBaseAddr
