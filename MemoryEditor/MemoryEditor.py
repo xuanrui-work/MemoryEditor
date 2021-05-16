@@ -173,3 +173,30 @@ class MemoryEditor:
 
 		modBaseAddr = GetModuleBaseAddress.getModuleBaseAddress(self.processId, moduleName)
 		return modBaseAddr
+
+	def tracePointer(self, baseAddress, offsets):
+		"""
+		Traces the pointer with value baseAddress recursively to len(offsets)-1 levels, to obtain the final pointer.
+
+		Args:
+			baseAddress: Initial base address to start the tracing with.
+			offsets: A non-empty list containing the offsets to add to the pointer at each recursion level.
+		Returns:
+			The final pointer value.
+		Raises:
+			IndexError: If the given offsets list is empty.
+			OSError: If ReadProcessMemory API failed at any level.
+
+		Examples:
+			To evaluate [[[[baseAddress + 0x10]] + 0x30] + 0x40] + 0x50, use the following offsets:
+			[0x10, 0x00, 0x30, 0x40, 0x50].
+		"""
+
+		if not offsets:
+			raise IndexError('The given offsets list cannot be empty')
+
+		p = baseAddress
+		for offset in offsets[0:-1]:
+			p = self.readData(p + offset, c_uint64)
+
+		return p + offsets[-1]
