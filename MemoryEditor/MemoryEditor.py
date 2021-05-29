@@ -83,6 +83,7 @@ class MemoryEditor:
 		Returns:
 			Number of bytes written.
 		Raises:
+			ValueError: If the given data does not fit into the specified dataType.
 			OSError: If WriteProcessMemory API failed.
 		"""	
 
