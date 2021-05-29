@@ -158,22 +158,6 @@ class MemoryEditor:
 		if result == 0:
 			raise WinError(get_last_error())
 
-	def getModuleBaseAddress(self, moduleName):
-		"""
-		Gets the base address of the module within the address space of the opened process.
-
-		Args:
-			moduleName: The module name of the module to lookup.
-		Returns:
-			The base address of the specified module.
-		Raises:
-			OSError: If CreateToolhelp32Snapshot, Module32First, or Module32Next API failed.
-			FileNotFoundError: If the specified module cannot be found in the process.
-		"""
-
-		modBaseAddr = GetModuleBaseAddress.getModuleBaseAddress(self.processId, moduleName)
-		return modBaseAddr
-
 	def tracePointer(self, baseAddress, offsets):
 		"""
 		Traces the pointer with value baseAddress recursively to len(offsets)-1 levels, to obtain the final pointer.
@@ -200,3 +184,19 @@ class MemoryEditor:
 			p = self.readData(p + offset, c_uint64)
 
 		return p + offsets[-1]
+
+	def getModuleBaseAddress(self, moduleName):
+		"""
+		Gets the base address of the module within the address space of the opened process.
+
+		Args:
+			moduleName: The module name of the module to lookup.
+		Returns:
+			The base address of the specified module.
+		Raises:
+			OSError: If CreateToolhelp32Snapshot, Module32First, or Module32Next API failed.
+			FileNotFoundError: If the specified module cannot be found in the process.
+		"""
+
+		modBaseAddr = GetModuleBaseAddress.getModuleBaseAddress(self.processId, moduleName)
+		return modBaseAddr
