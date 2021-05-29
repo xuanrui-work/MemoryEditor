@@ -57,22 +57,22 @@ def getModuleBaseAddress(processId, moduleName):
 	me32 = MODULEENTRY32(dwSize=sizeof(MODULEENTRY32))
 	modBaseAddr = None
 
-	if not Module32First(hSnapshot, byref(me32)):
-		winError = get_last_error()
-		CloseHandle(hSnapshot)
-		raise WinError(winError)
+	try:
+		if not Module32First(hSnapshot, byref(me32)):
+			raise WinError(get_last_error())
 
-	while True:
-		if me32.szModule.decode() == moduleName:
-			modBaseAddr = me32.modBaseAddr
-			break
-		if not Module32Next(hSnapshot, byref(me32)):
-			break
+		while True:
+			if me32.szModule.decode() == moduleName:
+				modBaseAddr = me32.modBaseAddr
+				break
+			if not Module32Next(hSnapshot, byref(me32)):
+				break
+		if modBaseAddr is None:
+			raise WinError(get_last_error())
 
-	if modBaseAddr is None:
-		winError = get_last_error()
+	except OSError as osError:
 		CloseHandle(hSnapshot)
-		raise WinError(winError)
+		raise osError
 
 	modBaseAddr = cast(modBaseAddr, c_void_p)
 	CloseHandle(hSnapshot)
