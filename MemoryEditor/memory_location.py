@@ -1,21 +1,21 @@
-from .MemoryEditor import MemoryEditor
+from .memory_editor import MemoryEditor
 
 class MemoryLocationDirect:
 	"""
 	The MemoryLocationDirect class is used to represent a memory location to be accessed directly,
-	without pointer tracing using tracePointer.
+	without pointer tracing using trace_pointer.
 	"""
 
-	def __init__(self, memoryEditor: MemoryEditor, baseAddress, ctype):
+	def __init__(self, memory_editor: MemoryEditor, base_addr, ctype):
 		"""
 		Args:
-			memoryEditor: MemoryEditor object used to access the memory location.
-			baseAddress: The address of the memory location.
+			memory_editor: MemoryEditor object used to access the memory location.
+			base_addr: The address of the memory location.
 			ctype: The ctypes._SimpleCData type for determining the size of the read/write OP.
 		"""
 
-		self.me = memoryEditor
-		self.baseAddress = baseAddress
+		self.me = memory_editor
+		self.base_addr = base_addr
 		self.ctype = ctype
 
 	def read(self):
@@ -28,7 +28,7 @@ class MemoryLocationDirect:
 			OSError: If ReadProcessMemory API failed.
 		"""
 
-		return self.me.readData(self.baseAddress, self.ctype)
+		return self.me.read_data(self.base_addr, self.ctype)
 
 	def write(self, data):
 		"""
@@ -41,25 +41,25 @@ class MemoryLocationDirect:
 			OSError: If WriteProcessMemory API failed.
 		"""
 
-		return self.me.writeData(self.baseAddress, self.ctype, data)
+		return self.me.write_data(self.base_addr, self.ctype, data)
 
 class MemoryLocationIndirect:
 	"""
 	The MemoryLocationDirect class is used to represent a memory location to be accessed indirectly,
-	with pointer tracing using tracePointer.
+	with pointer tracing using trace_pointer.
 	"""
 
-	def __init__(self, memoryEditor: MemoryEditor, baseAddress, offsets, ctype):
+	def __init__(self, memory_editor: MemoryEditor, base_addr, offsets, ctype):
 		"""
 		Args:
-			memoryEditor: MemoryEditor object used to access the memory location.
-			baseAddress: Initial base address to start the tracing with.
+			memory_editor: MemoryEditor object used to access the memory location.
+			base_addr: Initial base address to start the tracing with.
 			offsets: A non-empty list containing the offsets to add to the pointer at each recursion level.
 			ctype: The ctypes._SimpleCData type for determining the size of the read/write OP.
 		"""
 
-		self.me = memoryEditor
-		self.baseAddress = baseAddress
+		self.me = memory_editor
+		self.base_addr = base_addr
 		self.offsets = offsets
 		self.ctype = ctype
 
@@ -73,8 +73,8 @@ class MemoryLocationIndirect:
 			OSError: If ReadProcessMemory API failed.
 		"""
 
-		pointer = self.me.tracePointer(self.baseAddress, self.offsets)
-		return self.me.readData(pointer, self.ctype)
+		pointer = self.me.trace_pointer(self.base_addr, self.offsets)
+		return self.me.read_data(pointer, self.ctype)
 
 	def write(self, data):
 		"""
@@ -87,21 +87,21 @@ class MemoryLocationIndirect:
 			OSError: If ReadProcessMemory or WriteProcessMemory API failed.
 		"""
 
-		pointer = self.me.tracePointer(self.baseAddress, self.offsets)
-		return self.me.writeData(pointer, self.ctype, data)
+		pointer = self.me.trace_pointer(self.base_addr, self.offsets)
+		return self.me.write_data(pointer, self.ctype, data)
 
-def MemoryLocation(memoryEditor: MemoryEditor, ctype, baseAddress, offsets=None):
+def MemoryLocation(memory_editor: MemoryEditor, ctype, base_addr, offsets=None):
 	"""
 	Factory method that creates MemoryLocationDirect or MemoryLocationIndirect depending on whether
 	offsets is None.
 
 	Args:
-		memoryEditor: MemoryEditor object used to access the memory location.
+		memory_editor: MemoryEditor object used to access the memory location.
 		ctype: The ctypes._SimpleCData type for determining the size of the read/write OP.
 		offsets: If None, MemoryLocationDirect will be created. Otherwise, MemoryLocationIndirect will be created.
 	"""
 
 	if offsets is None:
-		return MemoryLocationDirect(memoryEditor, baseAddress, ctype)
+		return MemoryLocationDirect(memory_editor, base_addr, ctype)
 	else:
-		return MemoryLocationIndirect(memoryEditor, baseAddress, offsets, ctype)
+		return MemoryLocationIndirect(memory_editor, base_addr, offsets, ctype)

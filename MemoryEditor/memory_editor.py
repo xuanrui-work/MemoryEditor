@@ -1,4 +1,4 @@
-from . import GetModuleBaseAddress
+from .get_module_base_addr import get_module_base_addr
 
 from ctypes import *
 from ctypes.wintypes import *
@@ -31,81 +31,81 @@ class MemoryEditor:
 	by utilizing native Windows APIs from kernel32.
 	"""
 
-	def __init__(self, processId):
+	def __init__(self, process_id):
 		"""
 		Initializes the MemoryEditor class given a process ID. The specified process is opened automatically,
 		and the handle to it is saved to hProcess.
 
 		Args:
-			processId: Process ID of the process to perform memory editing.
+			process_id: Process ID of the process to perform memory editing.
 		Raises:
 			OSError: If OpenProcess API failed.
 		"""
 
-		self.processId = processId
+		self.process_id = process_id
 
-		hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, False, processId)
+		hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, False, process_id)
 		if hProcess is None:
 			raise WinError(get_last_error())
 
 		self.hProcess = hProcess
 
-	def readData(self, baseAddress, dataType):
+	def read_data(self, base_addr, data_type):
 		"""
 		Reads the data in the specified address range from the address space of the opened process.
 
 		Args:
-			baseAddress: Pointer to the base address in the specified process from which to read.
-			dataType: The ctypes._SimpleCData type for determining the size of the read OP.
+			base_addr: Pointer to the base address in the specified process from which to read.
+			data_type: The ctypes._SimpleCData type for determining the size of the read OP.
 		Returns:
 			The data read.
 		Raises:
 			OSError: If ReadProcessMemory API failed.
 		"""
 
-		buffer = dataType()
-		bytesRead = c_size_t()
+		buffer = data_type()
+		bytes_read = c_size_t()
 
-		result = ReadProcessMemory(self.hProcess, baseAddress, byref(buffer), sizeof(buffer), byref(bytesRead))
+		result = ReadProcessMemory(self.hProcess, base_addr, byref(buffer), sizeof(buffer), byref(bytes_read))
 		if result == 0:
 			raise WinError(get_last_error())
 
 		return buffer.value
 
-	def writeData(self, baseAddress, dataType, data):
+	def write_data(self, base_addr, data_type, data):
 		"""
 		Writes the given data to the specified address range in the address space of the opened process.
 
 		Args:
-			baseAddress: Pointer to the base address in the specified process to which data is written.
-			dataType: The ctypes._SimpleCData type for determining the size of the write OP.
+			base_addr: Pointer to the base address in the specified process to which data is written.
+			data_type: The ctypes._SimpleCData type for determining the size of the write OP.
 			data: The data to write.
 		Returns:
 			Number of bytes written.
 		Raises:
-			ValueError: If the given data does not fit into the specified dataType.
+			ValueError: If the given data does not fit into the specified data_type.
 			OSError: If WriteProcessMemory API failed.
 		"""	
 
-		buffer = dataType(data)
+		buffer = data_type(data)
 		if buffer.value != data:
-			raise ValueError('The given data does not fit into the specified dataType')
+			raise ValueError('The given data does not fit into the specified data_type')
 
-		bytesWritten = c_size_t()
+		bytes_written = c_size_t()
 
-		result = WriteProcessMemory(self.hProcess, baseAddress, byref(buffer), sizeof(buffer), byref(bytesWritten))
+		result = WriteProcessMemory(self.hProcess, base_addr, byref(buffer), sizeof(buffer), byref(bytes_written))
 		if result == 0:
 			raise WinError(get_last_error())
 
-		return bytesWritten.value
+		return bytes_written.value
 
-	def readByteArray(self, baseAddress, size):
+	def read_byte_array(self, base_addr, size):
 		"""
 		Reads the data in the specified address range from the address space of the opened process,
 		into a bytearray.
 
 		Args:
-			baseAddress: Pointer to the base address in the specified process from which to read.
+			base_addr: Pointer to the base address in the specified process from which to read.
 			size: The number of bytes to read.
 		Returns:
 			bytearray object containing the bytes read.
@@ -113,39 +113,39 @@ class MemoryEditor:
 			OSError: If ReadProcessMemory API failed.
 		"""
 
-		byteArray = bytearray(size)
+		byte_array = bytearray(size)
 
-		buffer = (c_ubyte * len(byteArray)).from_buffer(byteArray)
-		bytesRead = c_size_t()
+		buffer = (c_ubyte * len(byte_array)).from_buffer(byte_array)
+		bytes_read = c_size_t()
 
-		result = ReadProcessMemory(self.hProcess, baseAddress, byref(buffer), sizeof(buffer), byref(bytesRead))
+		result = ReadProcessMemory(self.hProcess, base_addr, byref(buffer), sizeof(buffer), byref(bytes_read))
 		if result == 0:
 			raise WinError(get_last_error())
 
-		return byteArray[0:bytesRead.value]
+		return byte_array[0:bytes_read.value]
 
-	def writeByteArray(self, baseAddress, byteArray):
+	def write_byte_array(self, base_addr, byte_array):
 		"""
 		Writes data from the given bytearray to the specified address range in the address space of
 		the opened process.
 
 		Args:
-			baseAddress: Pointer to the base address in the specified process to which data is written.
-			byteArray: bytearray object containing the bytes to write.
+			base_addr: Pointer to the base address in the specified process to which data is written.
+			byte_array: bytearray object containing the bytes to write.
 		Returns:
 			Number of bytes written.
 		Raises
 			OSError: If WriteProcessMemory API failed.
 		"""
 
-		buffer = (c_ubyte * len(byteArray)).from_buffer(byteArray)
-		bytesWritten = c_size_t()
+		buffer = (c_ubyte * len(byte_array)).from_buffer(byte_array)
+		bytes_written = c_size_t()
 
-		result = WriteProcessMemory(self.hProcess, baseAddress, byref(buffer), sizeof(buffer), byref(bytesWritten))
+		result = WriteProcessMemory(self.hProcess, base_addr, byref(buffer), sizeof(buffer), byref(bytes_written))
 		if result == 0:
 			raise WinError(get_last_error())
 
-		return bytesWritten.value
+		return bytes_written.value
 
 	def close(self):
 		"""
@@ -159,12 +159,12 @@ class MemoryEditor:
 		if result == 0:
 			raise WinError(get_last_error())
 
-	def tracePointer(self, baseAddress, offsets):
+	def trace_pointer(self, base_addr, offsets):
 		"""
-		Traces the pointer with value baseAddress recursively to len(offsets)-1 levels, to obtain the final pointer.
+		Traces the pointer with value base_addr recursively to len(offsets)-1 levels, to obtain the final pointer.
 
 		Args:
-			baseAddress: Initial base address to start the tracing with.
+			base_addr: Initial base address to start the tracing with.
 			offsets: A non-empty list containing the offsets to add to the pointer at each recursion level.
 		Returns:
 			The final pointer value.
@@ -173,25 +173,25 @@ class MemoryEditor:
 			OSError: If ReadProcessMemory API failed at any level.
 
 		Examples:
-			To evaluate [[[[baseAddress + 0x10]] + 0x30] + 0x40] + 0x50, use the following offsets:
+			To evaluate [[[[base_addr + 0x10]] + 0x30] + 0x40] + 0x50, use the following offsets:
 			[0x10, 0x00, 0x30, 0x40, 0x50].
 		"""
 
 		if not offsets:
 			raise IndexError('The given offsets list cannot be empty')
 
-		p = baseAddress
+		p = base_addr
 		for offset in offsets[0:-1]:
-			p = self.readData(p + offset, c_uint64)
+			p = self.read_data(p + offset, c_uint64)
 
 		return p + offsets[-1]
 
-	def getModuleBaseAddress(self, moduleName):
+	def get_module_base_addr(self, module_name):
 		"""
 		Gets the base address of the module within the address space of the opened process.
 
 		Args:
-			moduleName: The module name of the module to lookup.
+			module_name: The module name of the module to lookup.
 		Returns:
 			The base address of the specified module.
 		Raises:
@@ -199,5 +199,5 @@ class MemoryEditor:
 			FileNotFoundError: If the specified module cannot be found in the process.
 		"""
 
-		modBaseAddr = GetModuleBaseAddress.getModuleBaseAddress(self.processId, moduleName)
-		return modBaseAddr
+		module_base_addr = get_module_base_addr(self.process_id, module_name)
+		return module_base_addr

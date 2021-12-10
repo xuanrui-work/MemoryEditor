@@ -36,13 +36,13 @@ CloseHandle = kernel32.CloseHandle
 CloseHandle.argtypes = [HANDLE]
 CloseHandle.restype  = BOOL
 
-def getModuleBaseAddress(processId, moduleName):
+def get_module_base_addr(process_id, module_name):
 	"""
 	Gets the base address of the module within the address space of the specified process.
 
 	Args:
-		processId: Process ID of the process to perform the module lookup.
-		moduleName: The module name of the module to lookup.
+		process_id:  Process ID of the process to perform the module lookup.
+		module_name: The module name of the module to lookup.
 	Returns:
 		The base address of the specified module.
 	Raises:
@@ -50,30 +50,30 @@ def getModuleBaseAddress(processId, moduleName):
 		FileNotFoundError: If the specified module cannot be found in the process.
 	"""
 
-	hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, processId)
-	if c_int64(hSnapshot).value == -1:
+	h_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, process_id)
+	if c_int64(h_snapshot).value == -1:
 		raise WinError(get_last_error())
 
 	me32 = MODULEENTRY32(dwSize=sizeof(MODULEENTRY32))
-	modBaseAddr = None
+	module_base_addr = None
 
 	try:
-		if not Module32First(hSnapshot, byref(me32)):
+		if not Module32First(h_snapshot, byref(me32)):
 			raise WinError(get_last_error())
 
 		while True:
-			if me32.szModule.decode() == moduleName:
-				modBaseAddr = me32.modBaseAddr
+			if me32.szModule.decode() == module_name:
+				module_base_addr = me32.modBaseAddr
 				break
-			if not Module32Next(hSnapshot, byref(me32)):
+			if not Module32Next(h_snapshot, byref(me32)):
 				break
-		if modBaseAddr is None:
+		if module_base_addr is None:
 			raise WinError(get_last_error())
 
-	except OSError as osError:
-		CloseHandle(hSnapshot)
-		raise osError
+	except OSError as os_error:
+		CloseHandle(h_snapshot)
+		raise os_error
 
-	modBaseAddr = cast(modBaseAddr, c_void_p)
-	CloseHandle(hSnapshot)
-	return modBaseAddr.value
+	module_base_addr = cast(module_base_addr, c_void_p)
+	CloseHandle(h_snapshot)
+	return module_base_addr.value
